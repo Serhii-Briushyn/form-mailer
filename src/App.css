@@ -70,3 +70,9 @@
 .button:hover {
   background-color: #131557;
 }
+
+@media screen and (max-width: 1440px) {
+  .logo {
+    display: none;
+  }
+}
