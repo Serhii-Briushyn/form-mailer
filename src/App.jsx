@@ -1,18 +1,21 @@
 import { useState } from "react";
-
 import "./App.css";
 
+import Field from "./components/Field";
+import Select from "./components/Select";
+import Checkbox from "./components/Checkbox";
+import MarginOptions from "./components/MarginOptions";
+
+import { PROJECT_TYPES, DELIVERY_METHODS } from "./constants/selectOptions";
+import { formatDate } from "./utils/dates";
+import { buildMailBody, buildMailtoLink } from "./utils/mail";
+import { toNumber } from "./utils/numbers";
+import useMargin, { MARGIN_MODES } from "./hooks/useMargin";
+
 function App() {
-  const [discountChecked, setDiscountChecked] = useState(false);
-
-  const formatDate = (isoDate) => {
-    const [year, month, day] = isoDate.split("-");
-    return `${day}.${month}.${year}`;
-  };
-
   const [formData, setFormData] = useState({
-    manager_number: "",
-    number: "",
+    manager_name: "",
+    number_of_our_project: "",
     customer: "",
     name_of_project: "",
     type: "",
@@ -20,255 +23,252 @@ function App() {
     customer_project_number: "",
     contact_person: "",
     delivery_date: "",
-    amount: "",
+    sales_price: "",
     initial_cost: "",
     delivery_method: "",
     delivery_by_nmh: false,
   });
 
+  const {
+    mode,
+    customPercent,
+    setCustomPercent,
+    autoInitialCost,
+    toggleFixed8,
+    toggleCustom,
+  } = useMargin(formData.sales_price);
+
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prevData) => ({ ...prevData, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    if (type === "checkbox") {
+      setFormData((prev) => ({ ...prev, [name]: checked }));
+      return;
+    }
+    if (name === "sales_price" || name === "initial_cost") {
+      const normalized = value.replace(",", ".");
+      if (normalized === "" || /^[0-9]*[.]?[0-9]*$/.test(normalized)) {
+        setFormData((prev) => ({ ...prev, [name]: normalized }));
+      }
+      return;
+    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    const messageContent = `
-      Dobry den,
+    const sales = toNumber(formData.sales_price);
+    if (Number.isNaN(sales) || sales < 0) {
+      alert("Sales price must be a non-negative number.");
+      return;
+    }
 
-      Prosim zalozit novy projekt.
+    let initialCostStr = "";
+    if (mode === MARGIN_MODES.NONE) {
+      const raw =
+        formData.initial_cost === ""
+          ? formData.sales_price
+          : formData.initial_cost;
+      const init = toNumber(raw);
+      if (Number.isNaN(init) || init < 0) {
+        alert("Initial cost must be a non-negative number.");
+        return;
+      }
+      initialCostStr = init.toFixed(2);
+    } else {
+      if (!autoInitialCost) {
+        alert(
+          "Unable to calculate Initial cost. Check Sales price and margin settings."
+        );
+        return;
+      }
+      initialCostStr = autoInitialCost;
+    }
 
-      Manager number: ${formData.manager_number}
-      Number: ${formData.number}
-      Customer: ${formData.customer}
-      Name of project: ${formData.name_of_project}
-      Type: ${formData.type}
-      PO number: ${formData.po_number}
-      Customer project number: ${formData.customer_project_number}
-      Contact person: ${formData.contact_person}
-      Delivery date: ${formatDate(formData.delivery_date)}
-      Amount: ${formData.amount}
-      Initial cost: ${formData.initial_cost}
-      Delivery method: ${formData.delivery_method}
-      Delivery by NMH: ${formData.delivery_by_nmh ? "YES" : "NO"}
-
-      Dakujem
-    `;
-
-    const mailtoLink = `mailto:finance@nmh-sro.com?subject=New project ${
-      formData.number
-    }&body=${encodeURIComponent(messageContent)}`;
-
-    window.location.href = mailtoLink;
+    const body = buildMailBody(
+      { ...formData, initial_cost: initialCostStr, sales_price: sales },
+      formatDate(formData.delivery_date)
+    );
+    const subject = `New project ${formData.number_of_our_project}`;
+    const mailto = buildMailtoLink("finance@nmh-sro.com", subject, body);
+    window.location.href = mailto;
   };
+
+  const initialCostValue =
+    mode === MARGIN_MODES.NONE
+      ? formData.initial_cost !== ""
+        ? formData.initial_cost
+        : formData.sales_price
+      : autoInitialCost;
 
   return (
     <>
-      <img className="logo" src="/logo.png" alt="Logo" />
       <div className="container">
         <h1 className="title">Template of project</h1>
+
         <form className="form" onSubmit={handleSubmit}>
-          <div className="inputBox">
-            <label className="label">Manager number:</label>
+          <Field id="manager_name" label="Manager name:">
             <input
-              type="text"
-              name="manager_number"
-              value={formData.manager_number}
-              onChange={handleChange}
+              id="manager_name"
               className="input"
+              name="manager_name"
+              value={formData.manager_name}
+              onChange={handleChange}
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Number:</label>
+          </Field>
+
+          <Field id="number_of_our_project" label="Number of our project:">
             <input
-              type="text"
-              name="number"
-              value={formData.number}
-              onChange={handleChange}
+              id="number_of_our_project"
               className="input"
+              name="number_of_our_project"
+              value={formData.number_of_our_project}
+              onChange={handleChange}
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Customer:</label>
+          </Field>
+
+          <Field id="customer" label="Customer:">
             <input
-              type="text"
+              id="customer"
+              className="input"
               name="customer"
               value={formData.customer}
               onChange={handleChange}
-              className="input"
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Name of Project:</label>
+          </Field>
+
+          <Field id="name_of_project" label="Name of Project:">
             <input
-              type="text"
+              id="name_of_project"
+              className="input"
               name="name_of_project"
               value={formData.name_of_project}
               onChange={handleChange}
-              className="input"
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Type:</label>
-            <select
+          </Field>
+
+          <Field id="type" label="Type:">
+            <Select
+              id="type"
               name="type"
               value={formData.type}
               onChange={handleChange}
-              className="input"
+              options={PROJECT_TYPES}
+              placeholder="Select type"
               required
-            >
-              <option value="">Select type</option>
-              <option value="DE">DE</option>
-              <option value="MA">MA</option>
-              <option value="GD">GD</option>
-              <option value="CC">CC</option>
-              <option value="SP">SP</option>
-              <option value="LCP">LCP</option>
-              <option value="LCS">LCS</option>
-              <option value="RI">RI</option>
-              <option value="EC">EC</option>
-              <option value="SH">SH</option>
-              <option value="SE">SE</option>
-            </select>
-          </div>
-          <div className="inputBox">
-            <label className="label">PO Number:</label>
+            />
+          </Field>
+
+          <Field id="po_number" label="PO Number:">
             <input
-              type="text"
+              id="po_number"
+              className="input"
               name="po_number"
               value={formData.po_number}
               onChange={handleChange}
-              className="input"
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Customer project number:</label>
+          </Field>
+
+          <Field id="customer_project_number" label="Customer project number:">
             <input
-              type="text"
+              id="customer_project_number"
+              className="input"
               name="customer_project_number"
               value={formData.customer_project_number}
               onChange={handleChange}
-              className="input"
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Contact Person:</label>
+          </Field>
+
+          <Field id="contact_person" label="Contact Person:">
             <input
-              type="text"
+              id="contact_person"
+              className="input"
               name="contact_person"
               value={formData.contact_person}
               onChange={handleChange}
-              className="input"
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Delivery Date:</label>
+          </Field>
+
+          <Field id="delivery_date" label="Delivery Date:">
             <input
+              id="delivery_date"
               type="date"
+              className="input"
               name="delivery_date"
               value={formData.delivery_date}
               onChange={handleChange}
-              className="input"
               required
             />
-          </div>
-          <div className="inputBox">
-            <label className="label">Amount:</label>
-            <input
-              type="number"
-              name="amount"
-              value={formData.amount}
-              onChange={(e) => {
-                const { value } = e.target;
-                setFormData((prevData) => ({
-                  ...prevData,
-                  amount: value,
-                  initial_cost: discountChecked
-                    ? (value * 0.92).toFixed(2)
-                    : value,
-                }));
-              }}
-              className="input"
-              required
-            />
-          </div>
-          <div className="inputBox">
-            <label className="label">Initial Cost:</label>
-            <input
-              type="number"
-              name="initial_cost"
-              value={formData.initial_cost}
-              onChange={handleChange}
-              className="input"
-              required
-            />
-          </div>
-          <div className="inputBox">
-            <label className="label">
-              <input
-                type="checkbox"
-                checked={discountChecked}
-                onChange={(e) => {
-                  const isChecked = e.target.checked;
-                  setDiscountChecked(isChecked);
-                  setFormData((prevData) => ({
-                    ...prevData,
-                    initial_cost: isChecked
-                      ? (prevData.amount * 0.92).toFixed(2)
-                      : prevData.amount,
-                  }));
-                }}
-                className="checkbox"
-              />
-              Apply 8% Discount
-            </label>
-          </div>
+          </Field>
 
-          <div className="inputBox">
-            <label className="label">Delivery Method:</label>
-            <select
-              type="text"
+          <Field id="sales_price" label="Sales price:">
+            <input
+              id="sales_price"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              className="input"
+              name="sales_price"
+              value={formData.sales_price}
+              onChange={handleChange}
+              required
+            />
+          </Field>
+
+          <Field id="initial_cost" label="Initial Cost:">
+            <input
+              id="initial_cost"
+              type="number"
+              min="0"
+              step="0.01"
+              inputMode="decimal"
+              className="input"
+              name="initial_cost"
+              value={initialCostValue}
+              onChange={handleChange}
+              readOnly={mode !== MARGIN_MODES.NONE}
+              aria-readonly={mode !== MARGIN_MODES.NONE}
+              required
+            />
+          </Field>
+
+          <MarginOptions
+            mode={mode}
+            customPercent={customPercent}
+            setCustomPercent={setCustomPercent}
+            onToggleFixed8={toggleFixed8}
+            onToggleCustom={toggleCustom}
+          />
+
+          <Field id="delivery_method" label="Delivery Method:">
+            <Select
+              id="delivery_method"
               name="delivery_method"
               value={formData.delivery_method}
               onChange={handleChange}
-              className="input"
+              options={DELIVERY_METHODS}
+              placeholder="Select type"
               required
-            >
-              <option value="">Select type</option>
-              <option value="EXW">EXW</option>
-              <option value="FCA">FCA</option>
-              <option value="CPT">CPT</option>
-              <option value="CIP">CIP</option>
-              <option value="DAP">DAP</option>
-              <option value="DDP">DDP</option>
-              <option value="DPU">DPU</option>
-            </select>
-          </div>
+            />
+          </Field>
+
           <div className="inputBox">
-            <label className="label">
-              <input
-                type="checkbox"
-                checked={formData.delivery_by_nmh}
-                onChange={(e) => {
-                  const isChecked = e.target.checked;
-                  setFormData((prevData) => ({
-                    ...prevData,
-                    delivery_by_nmh: isChecked,
-                  }));
-                }}
-                className="checkbox"
-              />
-              Delivery by NMH
-            </label>
+            <Checkbox
+              name="delivery_by_nmh"
+              label="Delivery by NMH"
+              checked={formData.delivery_by_nmh}
+              onChange={handleChange}
+            />
           </div>
+
           <button type="submit" className="button">
             Send
           </button>
@@ -277,4 +277,5 @@ function App() {
     </>
   );
 }
+
 export default App;

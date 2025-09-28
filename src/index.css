@@ -1,8 +1,23 @@
 body {
   font-family: "Poppins", sans-serif;
-  background-color: #fff;
+  background-color: #f0eff4;
   color: #323f47;
   margin: 0;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  background-image: url("/NMH-watermark.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 50%;
+  opacity: 0.15;
 }
 
 body.no-scroll {
