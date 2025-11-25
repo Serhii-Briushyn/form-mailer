@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-manrope: "Manrope", "sans-serif";
+  --breakpoint-*: initial;
+  --breakpoint-sm: 375px;
+  --breakpoint-lg: 768px;
+  --breakpoint-xl: 1280px;
+  --color-gray-750: #2a3441;
+  --shadow-top-lg: 0 -10px 15px -3px rgb(0 0 0 / 0.1),
+    0 -4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.custom-scrollbar {
+  scrollbar-color: rgb(99, 102, 241, 50%) transparent;
+}

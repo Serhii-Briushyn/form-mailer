@@ -1,0 +1,1 @@
+export { mapFormToMailData } from "./mapFormToMailData";

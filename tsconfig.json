@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "types": ["vite/client"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "baseUrl": "src",
+    "paths": {
+      "@app/*": ["app/*"],
+      "@pages/*": ["pages/*"],
+      "@features/*": ["features/*"],
+      "@shared/*": ["shared/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}
